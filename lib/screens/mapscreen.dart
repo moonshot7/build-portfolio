@@ -85,6 +85,54 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  Future<void> _fetchBestRoute() async {
+    await _fetchTruckLocation();
+    if (_truckLocation == null || widget.binLocations.isEmpty) return;
+
+    List<LatLng> locations = [_truckLocation!, ...widget.binLocations];
+    List<LatLng> bestRoute = [_truckLocation!];
+    Set<LatLng> visited = {_truckLocation!};
+
+    LatLng currentLocation = _truckLocation!;
+    while (visited.length < locations.length) {
+      LatLng? nearest;
+      double nearestDistance = double.infinity;
+
+      for (LatLng location in locations) {
+        if (!visited.contains(location)) {
+          double distance = Distance().as(
+            LengthUnit.Meter,
+            currentLocation,
+            location,
+          );
+          if (distance < nearestDistance) {
+            nearest = location;
+            nearestDistance = distance;
+          }
+        }
+      }
+
+      if (nearest != null) {
+        bestRoute.add(nearest);
+        visited.add(nearest);
+        currentLocation = nearest;
+      }
+    }
+
+    List<LatLng> routePoints = [];
+    for (int i = 0; i < bestRoute.length - 1; i++) {
+      final route = await _directionsService.getRoute(
+        bestRoute[i],
+        bestRoute[i + 1],
+      );
+      routePoints.addAll(route);
+    }
+
+    setState(() {
+      _routePoints = routePoints;
+    });
+  }
+
   void _showBinInfoDialog(LatLng binLocation) {
     showDialog(
       context: context,
@@ -136,20 +184,9 @@ class _MapScreenState extends State<MapScreen> {
               },
               child: Image.asset(
                 'assets/splashlogo.png',
-                width: 50,
-                height: 50,
+                width: 40,
+                height: 40,
               ),
-            ),
-            const Spacer(),
-            const Row(
-              children: [
-                Text(
-                  '12600 | a | 15',
-                  style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(width: 10),
-                Icon(Icons.local_shipping),
-              ],
             ),
           ],
         ),
@@ -224,7 +261,8 @@ class _MapScreenState extends State<MapScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const HistoryScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const HistoryScreen()),
                 );
               },
             ),
@@ -250,6 +288,11 @@ class _MapScreenState extends State<MapScreen> {
         ),
       ),
       body: Content(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _fetchBestRoute,
+        child: const Icon(Icons.directions),
+        backgroundColor: const Color(0xFF68AC7B),
+      ),
     );
   }
 
@@ -270,7 +313,7 @@ class _MapScreenState extends State<MapScreen> {
                 width: 50,
                 height: 50,
                 child: const Icon(
-                  Icons.local_shipping,
+                  Icons.person_2_sharp,
                   color: Colors.blue,
                   size: 40,
                 ),

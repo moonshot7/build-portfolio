@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:latlong2/latlong.dart';
 import 'dart:convert';
 import 'dart:math';
+
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart';
 import 'package:smatrash/screens/driver/history.dart';
 import 'package:smatrash/screens/driver/notification.dart';
 import 'package:smatrash/screens/driver/report.dart';
@@ -21,6 +22,7 @@ class _HomeState extends State<HomeD> {
   final LatLng truckLocation = const LatLng(34.035404, -4.976526);
   final Distance distance = const Distance();
   bool isLoading = true;
+  bool isButtonVisible = true;
 
   @override
   void initState() {
@@ -29,12 +31,26 @@ class _HomeState extends State<HomeD> {
   }
 
   Future<void> fetchBinLocations() async {
-    final response = await http.get(Uri.parse('http://100.103.87.181:3000/bins'));
+    final response =
+        await http.get(Uri.parse('http://192.168.0.113:3000/bins'));
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
+      List<LatLng> locations = data
+          .map((item) => LatLng(item['latitude'], item['longitude']))
+          .toList();
+      List<int> levels = generateFillLevels(locations.length);
+
+      // Sort bins by distance from truckLocation
+      List<MapEntry<LatLng, int>> binsWithLevels = List.generate(
+        locations.length,
+        (index) => MapEntry(locations[index], levels[index]),
+      );
+      binsWithLevels.sort((a, b) => distance(truckLocation, a.key)
+          .compareTo(distance(truckLocation, b.key)));
+
       setState(() {
-        binLocations = data.map((item) => LatLng(item['latitude'], item['longitude'])).toList();
-        fillLevels = generateFillLevels(binLocations.length);
+        binLocations = binsWithLevels.map((entry) => entry.key).toList();
+        fillLevels = binsWithLevels.map((entry) => entry.value).toList();
         isLoading = false;
       });
     } else {
@@ -47,6 +63,19 @@ class _HomeState extends State<HomeD> {
   List<int> generateFillLevels(int count) {
     final random = Random();
     return List<int>.generate(count, (index) => 80 + random.nextInt(21));
+  }
+
+  void emptyBin(int index) {
+    setState(() {
+      fillLevels[index] = 0;
+    });
+
+    Future.delayed(const Duration(seconds: 3), () {
+      setState(() {
+        binLocations.removeAt(index);
+        fillLevels.removeAt(index);
+      });
+    });
   }
 
   @override
@@ -86,9 +115,13 @@ class _HomeState extends State<HomeD> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => MapScreen(
-                          binLocations: binLocations,
-                          centerLocation: binLocations.isNotEmpty ? binLocations[0] : const LatLng(0, 0))),
+                    builder: (context) => MapScreen(
+                      binLocations: binLocations,
+                      centerLocation: binLocations.isNotEmpty
+                          ? binLocations[0]
+                          : const LatLng(0, 0),
+                    ),
+                  ),
                 );
               },
             ),
@@ -103,7 +136,8 @@ class _HomeState extends State<HomeD> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const NotificationsScreen()),
                 );
               },
             ),
@@ -118,7 +152,8 @@ class _HomeState extends State<HomeD> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const HistoryScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const HistoryScreen()),
                 );
               },
             ),
@@ -156,8 +191,8 @@ class _HomeState extends State<HomeD> {
                           children: [
                             Image.asset(
                               'assets/logo.png',
-                              width: 50,
-                              height: 50,
+                              width: 40,
+                              height: 40,
                             ),
                           ],
                         ),
@@ -170,7 +205,8 @@ class _HomeState extends State<HomeD> {
                         children: [
                           Text(
                             '12600 | a | 15',
-                            style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                fontSize: 25, fontWeight: FontWeight.bold),
                           ),
                           SizedBox(width: 10),
                           Icon(Icons.local_shipping),
@@ -246,7 +282,9 @@ class _HomeState extends State<HomeD> {
                                   itemCount: binLocations.length,
                                   itemBuilder: (context, index) {
                                     final binLocation = binLocations[index];
-                                    final distanceToBin = distance(truckLocation, binLocation).toStringAsFixed(2);
+                                    final distanceToBin =
+                                        distance(truckLocation, binLocation)
+                                            .toStringAsFixed(2);
                                     final fillLevel = fillLevels[index];
                                     return buildBinCard(
                                       'Bin ${index + 1}',
@@ -254,6 +292,7 @@ class _HomeState extends State<HomeD> {
                                       'Distance: $distanceToBin m',
                                       context,
                                       binLocation,
+                                      index,
                                     );
                                   },
                                 ),
@@ -321,31 +360,34 @@ class _HomeState extends State<HomeD> {
                     Positioned(
                       top: 655,
                       left: 100,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return AlertDialog(
-                                title: const Text('Truck Status'),
-                                content: const Text('Truck is still empty'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.of(context).pop();
-                                    },
-                                    child: const Text('OK'),
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-                        },
-                        child: const Text(
-                          'Empty',
-                          style: TextStyle(fontSize: 20),
-                        ),
-                      ),
+                      child: isButtonVisible
+                          ? ElevatedButton(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return AlertDialog(
+                                      title: const Text('Truck Status'),
+                                      content:
+                                          const Text('Truck is still empty'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.of(context).pop();
+                                          },
+                                          child: const Text('OK'),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                              child: const Text(
+                                'Empty',
+                                style: TextStyle(fontSize: 20),
+                              ),
+                            )
+                          : Container(),
                     ),
                   ],
                 ),
@@ -354,12 +396,22 @@ class _HomeState extends State<HomeD> {
     );
   }
 
-  Widget buildBinCard(String name, String fill, String distance, BuildContext context, LatLng binLocation) {
+  void hideButton() {
+    setState(() {
+      isButtonVisible = false;
+    });
+  }
+
+  Widget buildBinCard(String name, String fill, String distance,
+      BuildContext context, LatLng binLocation, int index) {
+    final bool isEmpty = fillLevels[index] == 0;
     return Container(
-      width: 160,
+      width: 180,
       margin: const EdgeInsets.only(left: 20),
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.8),
+        color: isEmpty
+            ? Colors.green.withOpacity(0.8)
+            : Colors.red.withOpacity(0.8),
         borderRadius: BorderRadius.circular(15),
       ),
       child: Padding(
@@ -392,23 +444,27 @@ class _HomeState extends State<HomeD> {
               ),
             ),
             const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => MapScreen(
-                        binLocations: binLocations,
-                        centerLocation: binLocation,
-                        selectedBinLocation: binLocation,
-                      ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MapScreen(
+                      binLocations: binLocations,
+                      centerLocation: truckLocation,
+                      selectedBinLocation: binLocation,
                     ),
-                  );
-                },
-                child: const Text('View Route'),
-              ),
+                  ),
+                );
+              },
+              child: const Text('View Route'),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () {
+                emptyBin(index);
+              },
+              child: const Text('Empty'),
             ),
           ],
         ),
@@ -424,7 +480,8 @@ class AnimatedTruckImage extends StatefulWidget {
   _AnimatedTruckImageState createState() => _AnimatedTruckImageState();
 }
 
-class _AnimatedTruckImageState extends State<AnimatedTruckImage> with SingleTickerProviderStateMixin {
+class _AnimatedTruckImageState extends State<AnimatedTruckImage>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Offset> _animation;
 

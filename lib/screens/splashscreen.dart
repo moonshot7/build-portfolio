@@ -51,11 +51,11 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'SmaTrash Driver App',
+                  'SmaTrash',
                   style: TextStyle(
                     color: Colors.white,
                     fontFamily: 'Poppins',
-                    fontSize: 35,
+                    fontSize: 40,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -70,7 +70,7 @@ class _SplashScreenState extends State<SplashScreen>
                 'Copyright © SmaTrash , 2024 ',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 20,
+                  fontSize: 15,
                   fontFamily: 'Poppins',
                   fontWeight: FontWeight.w400,
                   height: 0,

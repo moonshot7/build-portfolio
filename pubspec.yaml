@@ -45,6 +45,7 @@ dependencies:
   flutter_map: ^6.1.0
   google_maps_flutter: ^2.6.1
   geolocator: ^12.0.0
+  flutter_map_cancellable_tile_provider: ^2.0.0
 
 dev_dependencies:
   flutter_test:
@@ -82,6 +83,9 @@ flutter:
     - assets/background.png
     - assets/header_bg.png
     - assets/home_truck.png
+    - assets/model/tours.h5
+    - assets/client_bg.png
+    - assets/waste_properly.webp
   # An image asset can refer to one or more resolution-flutterspecific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
 

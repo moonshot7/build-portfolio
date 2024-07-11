@@ -1,16 +1,2 @@
-# test
-
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+# smatrash
+Smatrash is an innovative waste management system designed to optimize waste collection processes using smart technology. By employing IoT sensors and predictive algorithms, Smatrash monitors waste levels in real-time and determines the most efficient routes for waste collection. This approach not only reduces operational costs but also promotes environmental sustainability by minimizing unnecessary trips and ensuring timely waste collection.
